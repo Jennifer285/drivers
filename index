@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Questionnaire Drivers AT — Auto-positionnement</title>
+  <meta name="description" content="Questionnaire de 40 items (drivers AT) — auto-positionnement, scoring, export, impression. Formatrice : Jennifer Mandot." />
+  <style>
+    /* =====================
+       Styles de base
+       ===================== */
+    :root{
+      --bg: #0b0c10;
+      --card: #111318;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --accent: #4f8cff;
+      --accent-2: #7c4dff;
+      --ok: #34a853;
+      --warn: #fbbc05;
+      --err: #ea4335;
+      --border: #22252d;
+      --shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f7f8fa;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #4b5563;
+        --accent: #1d4ed8;
+        --accent-2: #7c3aed;
+        --ok: #16a34a;
+        --warn: #ca8a04;
+        --err: #dc2626;
+        --border: #e5e7eb;
+        --shadow: 0 8px 30px rgba(31,41,55,.08);
+      }
+    }
+
+    html, body{height:100%;}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color:var(--text); background:linear-gradient(180deg,var(--bg), #0d1117 40%, var(--bg));
+    }
+
+    .container{ max-width: 1050px; margin: 0 auto; padding: 28px 16px 80px; }
+
+    header{ position: sticky; top: 0; z-index: 20; backdrop-filter: blur(6px); background: color-mix(in lab, var(--bg) 75%, transparent); border-bottom: 1px solid var(--border); }
+    header .inner{ max-width: 1050px; margin: 0 auto; padding: 14px 16px; display:flex; gap:12px; align-items:center; }
+    .logo{ width: 40px; height: 40px; border-radius: 8px; object-fit: cover; box-shadow: var(--shadow); }
+    .title{ font-weight: 700; letter-spacing:.2px; }
+
+    .card{ background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+    .section{ padding: 20px; }
+    .section h2{ margin: 0 0 10px; font-size: 1.25rem; }
+    .muted{ color: var(--muted); }
+
+    .grid{ display:grid; gap:16px; }
+
+    .actions{ display:flex; flex-wrap: wrap; gap: 10px; align-items:center; }
+    button, .btn{
+      appearance: none; border:1px solid var(--border); background: linear-gradient(180deg,#1a1f2a,#121722);
+      color:var(--text); padding:10px 14px; border-radius: 12px; font-weight:600; cursor:pointer;
+      transition: transform .035s ease, border-color .2s ease; box-shadow: var(--shadow);
+    }
+    @media (prefers-color-scheme: light){
+      button, .btn{ background: linear-gradient(180deg,#ffffff,#f3f4f6); }
+    }
+    button:hover{ transform: translateY(-1px); }
+    button.primary{ border-color: color-mix(in lab, var(--accent) 65%, var(--border)); }
+    button.ghost{ background: transparent; }
+
+    /* Questionnaire */
+    .scale{ display:grid; grid-template-columns: repeat(5, minmax(40px,1fr)); gap:4px; text-align:center; font-size:.85rem; }
+    .item{ border-top:1px dashed var(--border); padding:16px 0; }
+    .item:first-child{ border-top:none; }
+    .q-head{ display:flex; gap:12px; align-items:flex-start; }
+    .q-num{ flex: 0 0 28px; width:28px; height:28px; display:grid; place-items:center; border-radius:8px; background:color-mix(in lab, var(--accent) 25%, var(--card)); font-weight:700; }
+    .q-text{ line-height:1.45; }
+    .radios{ display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-top:10px; }
+    .radio{ display:flex; align-items:center; justify-content:center; gap:8px; padding:8px; border:1px solid var(--border); border-radius:8px; }
+    .radio input{ transform: scale(1.05); }
+
+    .legend{ display:flex; gap:10px; flex-wrap: wrap; align-items:center; font-size:.9rem; }
+    .pill{ padding:6px 10px; border:1px solid var(--border); border-radius:999px; background:color-mix(in lab, var(--card) 60%, transparent); }
+
+    /* Résultats */
+    #results{ display:none; }
+    .results-grid{ display:grid; grid-template-columns: 1fr; gap:16px; }
+    @media (min-width: 860px){ .results-grid{ grid-template-columns: .9fr 1.1fr; } }
+    .table{ width:100%; border-collapse: collapse; }
+    .table th, .table td{ border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; }
+    .badge{ padding:4px 8px; border-radius:8px; border:1px solid var(--border); }
+
+    canvas{ width:100%; height:380px; border:1px solid var(--border); border-radius: 12px; background: color-mix(in lab, var(--card) 80%, transparent); }
+
+    .footer{ margin-top: 26px; font-size:.9rem; color:var(--muted); }
+    .notice{ border-left:4px solid var(--accent); padding:10px 12px; background: color-mix(in lab, var(--card) 70%, transparent); border-radius:8px; }
+
+    /* Impression */
+    @media print{
+      header, .no-print{ display:none !important; }
+      body{ background:#fff; }
+      .container{ padding:0; }
+      .card{ border:none; box-shadow:none; }
+      canvas{ height:260px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="no-print" role="banner">
+    <div class="inner">
+      <img src="logo-jennifer-mandot.png" alt="Logo Jennifer Mandot" class="logo" />
+      <div>
+        <div class="title">Questionnaire Drivers AT — Auto-positionnement</div>
+        <div class="muted" style="font-size:.9rem">40 items • scoring immédiat • export CSV/JSON • impression</div>
+        <div class="muted" style="font-size:.85rem">Formatrice : <strong>Jennifer Mandot</strong></div>
+      </div>
+      <div style="margin-left:auto" class="actions">
+        <button id="btn-print" class="ghost" title="Imprimer / PDF (Ctrl/Cmd+P)">🖨️ Imprimer</button>
+        <button id="btn-reset" class="ghost" title="Effacer toutes les réponses">↺ Refaire</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" id="top" role="main">
+    <!-- Intro -->
+    <section class="card section" aria-labelledby="intro-h">
+      <h1 id="intro-h" style="margin:0 0 8px">Auto-positionnement — 5 drivers (Analyse Transactionnelle)</h1>
+      <p class="muted">Cochez pour chaque affirmation le degré d’accord de 1 à 5. <strong>Répondez spontanément</strong>, sans chercher la bonne réponse : il s’agit de votre fonctionnement habituel, notamment sous pression.</p>
+      <div class="legend" aria-describedby="scale-help">
+        <span id="scale-help" class="pill">1 = Pas du tout d’accord</span>
+        <span class="pill">2 = Plutôt pas d’accord</span>
+        <span class="pill">3 = Moyennement d’accord</span>
+        <span class="pill">4 = Plutôt d’accord</span>
+        <span class="pill">5 = Tout à fait d’accord</span>
+      </div>
+    </section>
+
+    <!-- Questionnaire -->
+    <section class="card section" aria-labelledby="q-h">
+      <div class="actions no-print" style="justify-content:space-between; margin-bottom:6px">
+        <h2 id="q-h" style="margin:0">Questionnaire</h2>
+        <div>
+          <label style="font-size:.9rem; margin-right:8px"><input type="checkbox" id="persist" /> Sauvegarder localement</label>
+          <button id="btn-calc" class="primary">Calculer mon profil</button>
+        </div>
+      </div>
+      <div id="questions" class="grid" role="group" aria-label="40 items du questionnaire"></div>
+      <div class="notice no-print" style="margin-top:12px">Astuce : vous pouvez utiliser la touche <strong>Tab</strong> pour naviguer, puis les flèches pour sélectionner une valeur.</div>
+    </section>
+
+    <!-- Résultats -->
+    <section id="results" class="card section" aria-labelledby="res-h">
+      <div class="actions" style="justify-content:space-between; gap:12px">
+        <h2 id="res-h" style="margin:0">Résultats</h2>
+        <div class="no-print actions">
+          <button id="btn-export-csv">Exporter CSV</button>
+          <button id="btn-export-json">Exporter JSON</button>
+        </div>
+      </div>
+
+      <div class="results-grid" id="resultats">
+        <div>
+          <table class="table" aria-describedby="res-desc">
+            <thead>
+              <tr>
+                <th>Driver</th>
+                <th>Items</th>
+                <th>Moyenne / 5</th>
+                <th>%</th>
+                <th>Rôle pédagogique</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+          <p id="res-desc" class="muted" style="margin:10px 0 0">Les pourcentages sont calculés sur une échelle 0–100 à partir des moyennes (x20). Les drivers les plus élevés sont dominants.</p>
+        </div>
+        <div>
+          <canvas id="chart" width="640" height="380" role="img" aria-label="Graphique des scores par driver"></canvas>
+        </div>
+      </div>
+
+      <div class="footer">
+        <strong>Clés de lecture</strong> :
+        <div style="margin-top:6px" class="grid">
+          <div class="notice">
+            <strong>Sois parfait</strong> — + Qualité / rigueur • – Peur de l’erreur / surcharge
+          </div>
+          <div class="notice">
+            <strong>Fais plaisir</strong> — + Coopération • – Difficulté à dire non
+          </div>
+          <div class="notice">
+            <strong>Sois fort</strong> — + Sang-froid • – Distance émotionnelle
+          </div>
+          <div class="notice">
+            <strong>Fais des efforts</strong> — + Persévérance • – Complexification
+          </div>
+          <div class="notice">
+            <strong>Dépêche-toi</strong> — + Efficacité • – Précipitation
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="muted" style="margin-top:16px">© 2025 — Conception du questionnaire : <strong>Jennifer Mandot</strong>. Licence <a href="#" onclick="alert('MIT License — Utilisation libre avec attribution.'); return false;">MIT</a>.</p>
+  </main>
+
+  <script>
+    /*
+      Questionnaire Drivers AT — tout-en-un (index unique)
+      Auteur du questionnaire: Jennifer Mandot — Licence MIT
+      Fonctionnalités: génération dynamique des 40 items, validation, scoring (moyenne + %),
+      graphique <canvas> sans librairie, export CSV/JSON, impression, sauvegarde locale.
+    */
+
+    // 1) Données — items mélangés (texte) et mapping -> driver
+    const ITEMS = [
+      "J’ai du mal à demander de l’aide.",
+      "J’aime que tout le monde s’entende bien.",
+      "J’ai du mal à accepter mes erreurs.",
+      "Je suis souvent pressé(e), même sans vraie raison.",
+      "Je préfère les tâches complexes aux tâches faciles.",
+      "Je me sens coupable quand je déçois quelqu’un.",
+      "Je me sens productif(ve) quand je suis dans l’urgence.",
+      "J’ai tendance à relire et corriger plusieurs fois mes productions.",
+      "J’ai tendance à croire que la réussite doit se mériter.",
+      "Je préfère éviter les conflits, même si je ne suis pas d’accord.",
+      "J’ai peur d’être jugé(e) si je fais une faute.",
+      "Je garde souvent mes problèmes pour moi.",
+      "Je trouve plus de satisfaction dans l’effort que dans le résultat.",
+      "Je déteste perdre du temps.",
+      "J’ai du mal à montrer que je suis fatigué(e) ou triste.",
+      "Je cherche toujours à faire les choses « comme il faut ».",
+      "J’ai tendance à commencer plusieurs choses en même temps.",
+      "Je me méfie des solutions trop simples.",
+      "Je m’inquiète facilement si quelqu’un ne m’aime pas.",
+      "Je valorise la maîtrise de soi, même dans les situations difficiles.",
+      "Je me sens mal à l’aise quand les autres ne respectent pas les règles.",
+      "Je me sens coupable quand je n’ai pas travaillé dur.",
+      "J’ai du mal à attendre ou à faire les choses lentement.",
+      "Je me fixe souvent des objectifs très élevés.",
+      "J’ai tendance à faire passer les besoins des autres avant les miens.",
+      "Je suis plus à l’aise dans le rôle de celui/celle qui aide que de celui/celle qui reçoit de l’aide.",
+      "Je me sens fier(e) de mon endurance face aux difficultés.",
+      "Je m’impatiente quand les autres ne vont pas assez vite.",
+      "On me dit souvent que je suis trop exigeant(e).",
+      "J’ai besoin de reconnaissance pour mes efforts.",
+      "Je parle ou marche souvent vite.",
+      "J’ai souvent le sentiment qu’il faut « lutter » pour obtenir quelque chose.",
+      "J’évite de montrer mes émotions.",
+      "Je cherche souvent à deviner ce que les autres attendent de moi.",
+      "Je n’aime pas rendre un travail tant qu’il n’est pas impeccable.",
+      "Il m’est difficile de dire non.",
+      "Je pense qu’il faut rester fort(e), quoi qu’il arrive.",
+      "J’ai du mal à accepter que certaines choses puissent être simples.",
+      "Il m’est difficile de prendre du temps pour me détendre.",
+      "Je suis fier(e) de la qualité de mon travail, même si cela prend du temps."
+    ];
+
+    // Mapping items -> driver keys (index 1-based dans l’énoncé)
+    const DRIVERS = {
+      parfait:   { label: "Sois parfait", items: [3,8,11,16,21,24,29,35,40] },
+      plaisir:   { label: "Fais plaisir", items: [2,6,10,19,25,30,34,36] },
+      fort:      { label: "Sois fort", items: [1,12,15,20,26,33,37] },
+      efforts:   { label: "Fais des efforts", items: [5,9,13,18,22,27,32,38] },
+      vite:      { label: "Dépêche-toi", items: [4,7,14,17,23,28,31,39] }
+    };
+
+    const DRIVER_KEYS = Object.keys(DRIVERS);
+
+    // 2) Rendu des questions
+    const $q = document.getElementById('questions');
+    function renderItems(){
+      const frag = document.createDocumentFragment();
+      ITEMS.forEach((text, i) => {
+        const num = i + 1;
+        const wrap = document.createElement('div');
+        wrap.className = 'item';
+        wrap.innerHTML = `
+          <div class=\"q-head\">
+            <div class=\"q-num\" aria-hidden=\"true\">${num}</div>
+            <div class=\"q-text\">${text}</div>
+          </div>
+          <div class=\"radios\" role=\"group\" aria-label=\"Échelle 1 à 5 pour l’item ${num}\">\n            ${[1,2,3,4,5].map(val => `
+              <label class=\"radio\" for=\"q${num}-${val}\">\n                <input type=\"radio\" name=\"q${num}\" id=\"q${num}-${val}\" value=\"${val}\" />\n                <span>${val}</span>\n              </label>\n            `).join('')}\n          </div>
+        `;
+        frag.appendChild(wrap);
+      });
+      $q.appendChild(frag);
+    }
+
+    // 3) Lecture des réponses
+    function getResponses(){
+      const values = {};
+      for(let i=1;i<=ITEMS.length;i++){
+        const checked = document.querySelector(`input[name=q${i}]:checked`);
+        values[i] = checked ? Number(checked.value) : null;
+      }
+      return values;
+    }
+
+    function validate(values){
+      const missing = Object.entries(values).filter(([,v]) => v==null).map(([k])=>Number(k));
+      return { valid: missing.length===0, missing };
+    }
+
+    // 4) Scoring
+    function computeScores(values){
+      const scores = {};
+      for(const key of DRIVER_KEYS){
+        const indices = DRIVERS[key].items;
+        const answers = indices.map(i => values[i]).filter(v => typeof v === 'number');
+        const total = answers.reduce((a,b)=>a+b,0);
+        const mean = answers.length ? total / answers.length : 0;
+        const pct  = Math.round(mean * 20); // 5 -> 100%
+        scores[key] = { label: DRIVERS[key].label, count: answers.length, total, mean, pct, items: indices };
+      }
+      return scores;
+    }
+
+    // 5) Rendu résultats + mise en avant des dominants
+    const $results = document.getElementById('results');
+    const $tbody   = document.getElementById('table-body');
+    function renderResults(scores){
+      // Trouver max pct pour badges
+      const maxPct = Math.max(...DRIVER_KEYS.map(k => scores[k].pct));
+      $tbody.innerHTML = '';
+      DRIVER_KEYS.forEach(k => {
+        const s = scores[k];
+        const tr = document.createElement('tr');
+        const badge = s.pct === maxPct ? `<span class=\"badge\" style=\"border-color:var(--ok)\">dominant</span>` : '';
+        tr.innerHTML = `
+          <td><strong>${s.label}</strong> ${badge}</td>
+          <td class=\"muted\">${s.items.join(', ')}</td>
+          <td>${s.mean.toFixed(2)}</td>
+          <td>${String(s.pct).padStart(2,' ')}%</td>
+          <td class=\"muted\">${summaryFor(k)}</td>
+        `;
+        $tbody.appendChild(tr);
+      });
+      drawChart(scores);
+      $results.style.display = 'block';
+      // ancre
+      location.hash = '#resultats';
+    }
+
+    function summaryFor(key){
+      switch(key){
+        case 'parfait': return '+ Qualité/rigueur — – Peur de l’erreur/surcharge';
+        case 'plaisir': return '+ Coopération — – Difficulté à dire non';
+        case 'fort':    return '+ Sang-froid — – Distance émotionnelle';
+        case 'efforts': return '+ Persévérance — – Complexification';
+        case 'vite':    return '+ Efficacité — – Précipitation';
+        default: return '';
+      }
+    }
+
+    // 6) Graphique barres simple en <canvas> (sans librairie)
+    const $canvas = document.getElementById('chart');
+    const ctx = $canvas.getContext('2d');
+
+    function drawChart(scores){
+      const labels = DRIVER_KEYS.map(k => DRIVERS[k].label);
+      const data   = DRIVER_KEYS.map(k => scores[k].pct);
+      const W = $canvas.width, H = $canvas.height;
+      ctx.clearRect(0,0,W,H);
+
+      // fond
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--card');
+      ctx.fillRect(0,0,W,H);
+
+      // axes
+      const bottom = H - 42; const top = 24; const left = 56; const right = W - 24;
+      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border');
+      ctx.lineWidth = 1;
+
+      // lignes horizontales (0,25,50,75,100)
+      ctx.font = '12px system-ui';
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted');
+      for(let p=0; p<=100; p+=25){
+        const y = bottom - (p/100)*(bottom-top);
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+        ctx.fillText(p + '%', 12, y+4);
+      }
+
+      // barres
+      const n = data.length;
+      const gap = 16; // espacement barres
+      const barW = (right-left - (n-1)*gap) / n;
+      const accent = getComputedStyle(document.body).getPropertyValue('--accent');
+      const accent2 = getComputedStyle(document.body).getPropertyValue('--accent-2');
+
+      for(let i=0;i<n;i++){
+        const x = left + i*(barW+gap);
+        const h = (data[i]/100)*(bottom-top);
+        const y = bottom - h;
+        // dégradé vertical
+        const grad = ctx.createLinearGradient(0,y,0,bottom);
+        grad.addColorStop(0, accent.trim());
+        grad.addColorStop(1, accent2.trim());
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, barW, h);
+        // étiquette valeur
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px system-ui';
+        ctx.fillText(data[i] + '%', x + barW/2 - 14, y - 6);
+        // label x
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text');
+        wrapText(ctx, labels[i], x, bottom+14, barW, 14);
+      }
+    }
+
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+      const words = text.split(' ');
+      let line = ''; let ly = y;
+      ctx.font = '12px system-ui';
+      ctx.textBaseline = 'top';
+      for(let n=0;n<words.length;n++){
+        const test = line + words[n] + ' ';
+        if(ctx.measureText(test).width > maxWidth && n > 0){
+          ctx.fillText(line, x, ly);
+          line = words[n] + ' ';
+          ly += lineHeight;
+        } else line = test;
+      }
+      ctx.fillText(line, x, ly);
+    }
+
+    // 7) Export CSV / JSON
+    function toCSV(scores, values){
+      const lines = [];
+      lines.push(['item','texte','reponse'].join(','));
+      ITEMS.forEach((t,i)=>{
+        const v = values[i+1] ?? '';
+        lines.push([i+1, '"'+t.replaceAll('"','""')+'"', v].join(','));
+      });
+      lines.push('');
+      lines.push(['driver','moyenne','pourcent'].join(','));
+      DRIVER_KEYS.forEach(k=>{
+        const s = scores[k];
+        lines.push([s.label, s.mean.toFixed(2), s.pct + '%'].join(','));
+      });
+      return lines.join('\n');
+    }
+
+    function download(filename, content, type='text/plain'){
+      const blob = new Blob([content], {type});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+    }
+
+    // 8) Persistance locale
+    const STORAGE_KEY = 'driversAT.answers.v1';
+    function save(values){ localStorage.setItem(STORAGE_KEY, JSON.stringify(values)); }
+    function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch{ return {}; } }
+    function applyLoaded(values){
+      Object.entries(values).forEach(([i,v])=>{
+        if(v){ const input = document.getElementById(`q${i}-${v}`); if(input) input.checked = true; }
+      });
+    }
+
+    // 9) Events
+    document.getElementById('btn-calc').addEventListener('click', () => {
+      const values = getResponses();
+      const { valid, missing } = validate(values);
+      if(!valid){
+        alert(`Vous n\\'avez pas répondu à ${missing.length} item(s) : ${missing.slice(0,8).join(', ')}${missing.length>8?'…':''}`);
+        return;
+      }
+      if(document.getElementById('persist').checked){ save(values); }
+      const scores = computeScores(values);
+      renderResults(scores);
+    });
+
+    document.getElementById('btn-export-csv').addEventListener('click', () => {
+      const values = getResponses();
+      const { valid } = validate(values);
+      if(!valid){ return alert('Veuillez compléter le questionnaire avant d\'exporter.'); }
+      const scores = computeScores(values);
+      const csv = toCSV(scores, values);
+      download('resultats-drivers.csv', csv, 'text/csv;charset=utf-8');
+    });
+
+    document.getElementById('btn-export-json').addEventListener('click', () => {
+      const values = getResponses();
+      const { valid } = validate(values);
+      if(!valid){ return alert('Veuillez compléter le questionnaire avant d\'exporter.'); }
+      const scores = computeScores(values);
+      const out = { meta: { date: new Date().toISOString() }, values, scores };
+      download('resultats-drivers.json', JSON.stringify(out, null, 2), 'application/json');
+    });
+
+    document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if(!confirm('Effacer toutes les réponses ?')) return;
+      for(let i=1;i<=ITEMS.length;i++){
+        const checked = document.querySelector(`input[name=q${i}]:checked`);
+        if(checked) checked.checked = false;
+      }
+      localStorage.removeItem(STORAGE_KEY);
+      document.getElementById('results').style.display = 'none';
+      location.hash = '#top';
+    });
+
+    document.getElementById('persist').addEventListener('change', (e)=>{
+      if(e.target.checked){
+        const values = getResponses();
+        save(values);
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    });
+
+    // 10) Init
+    renderItems();
+    // Charger si présent
+    const loaded = load();
+    if(Object.keys(loaded).length){
+      applyLoaded(loaded);
+      document.getElementById('persist').checked = true;
+    }
+
+  </script>
+</body>
+</html>
